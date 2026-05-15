@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Air Pen Remastered</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <!-- Load FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div id="app-container">
+        <!-- Video Layer -->
+        <video id="webcam" autoplay playsinline></video>
+        <!-- Drawing Layer -->
+        <canvas id="output_canvas"></canvas>
+        <!-- Overlay Layer for skeletal wireframe and cursors -->
+        <canvas id="overlay_canvas"></canvas>
+
+        <!-- Camera Status Indicator -->
+        <div class="camera-status">
+            <span class="dot red" id="cam-dot"></span> Camera <span id="cam-state">OFF</span>
+        </div>
+
+        <!-- Dynamic Gesture Guide Badge -->
+        <div id="gesture-guide" class="gesture-badge hidden">
+            <span id="gesture-icon">👋</span>
+            <span id="gesture-text">SHOW HAND</span>
+        </div>
+
+        <!-- Right Sidebar -->
+        <div class="sidebar">
+            <div class="brand">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <h2>Air Pen</h2>
+            </div>
+
+            <!-- Color Palette -->
+            <div class="panel-section">
+                <label>Colors</label>
+                <div class="color-grid" id="color-grid">
+                    <!-- Colors injected by JS -->
+                </div>
+            </div>
+
+            <!-- Sliders -->
+            <div class="panel-section">
+                <label>Thickness: <span id="thickness-val">8</span>px</label>
+                <input type="range" id="thickness-slider" min="2" max="40" value="8">
+                
+                <label>Glow: <span id="glow-val">15</span>px</label>
+                <input type="range" id="glow-slider" min="0" max="60" value="15">
+            </div>
+
+            <!-- Actions -->
+            <div class="panel-section action-grid">
+                <button class="action-btn" id="undo-btn"><i class="fa-solid fa-rotate-left"></i> Undo</button>
+                <button class="action-btn" id="clear-btn"><i class="fa-solid fa-trash-can"></i> Clear</button>
+                <button class="action-btn" id="camera-btn"><i class="fa-solid fa-video-slash"></i> Hide Cam</button>
+                <button class="action-btn" id="save-btn"><i class="fa-solid fa-download"></i> Save</button>
+            </div>
+
+            <button id="start-btn" class="primary-btn">
+                <i class="fa-solid fa-spinner fa-spin"></i> Loading AI...
+            </button>
+        </div>
+    </div>
+
+    <!-- MediaPipe Script -->
+    <script type="module" src="app.js"></script>
+</body>
+</html>
