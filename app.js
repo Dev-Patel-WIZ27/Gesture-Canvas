@@ -48,7 +48,7 @@ let isDrawing       = false;
 let lastX = null, lastY = null;
 let smoothX = null, smoothY = null;
 
-const SMOOTH = 0.45; // Exponential smoothing factor
+const SMOOTH = 0.25; // Lower = smoother, more lag-free trailing
 
 let undoHistory = [];
 
@@ -87,12 +87,12 @@ class Particle {
         this.x  = x;
         this.y  = y;
         const angle = Math.random() * Math.PI * 2;
-        const speed = Math.random() * 2.5 + 0.5;
+        const speed = Math.random() * 1.2 + 0.2;  // Slower, gentler scatter
         this.vx = Math.cos(angle) * speed;
-        this.vy = Math.sin(angle) * speed - 0.5;  // slight upward drift
-        this.alpha   = 1;
-        this.decay   = Math.random() * 0.035 + 0.015;
-        this.scale   = Math.random() * 0.9 + 0.3;
+        this.vy = Math.sin(angle) * speed - 0.3;  // very slight upward drift
+        this.alpha   = 0.8;  // Start slightly transparent
+        this.decay   = Math.random() * 0.025 + 0.012;  // Slower fade
+        this.scale   = Math.random() * 0.6 + 0.2;  // Smaller particles
         // Alternate between pure white and the selected color for a sparkle feel
         this.orb = Math.random() > 0.35 ? orbCache['#ffffff'] : (orbCache[color] || orbCache['#ffffff']);
     }
@@ -114,8 +114,8 @@ class Particle {
 }
 
 function spawnParticles(x, y, prevX, prevY) {
-    const steps  = 6;  // interpolate along stroke
-    const count  = Math.max(4, Math.floor(brushSize * 1.2));
+    const steps = 4;  // Fewer interpolation steps
+    const count = Math.max(2, Math.floor(brushSize * 0.5));  // Much fewer particles
     for (let s = 0; s < steps; s++) {
         const t  = s / steps;
         const px = prevX + (x - prevX) * t;
@@ -276,18 +276,32 @@ function recognizeGesture(lm) {
 }
 
 // ─── Drawing Logic ────────────────────────────────────────────────────────────
+// Store previous mid-point for smooth quadratic curves
+let prevMidX = null, prevMidY = null;
+
 function drawNeonStroke(x1, y1, x2, y2) {
+    // Use midpoints for quadratic bezier — this eliminates kinks between segments
+    const midX = (x1 + x2) / 2;
+    const midY = (y1 + y2) / 2;
+
     drawCtx.save();
     drawCtx.lineCap  = 'round';
     drawCtx.lineJoin = 'round';
 
-    // Layer 1 — Wide soft outer glow
-    drawCtx.lineWidth   = brushSize * 3;
+    // Layer 1 — Wide soft outer glow (reduced opacity)
+    drawCtx.lineWidth   = brushSize * 2.5;
     drawCtx.strokeStyle = selectedColor;
-    drawCtx.globalAlpha = 0.12;
-    drawCtx.shadowBlur  = glowSize * 2;
+    drawCtx.globalAlpha = 0.08;
+    drawCtx.shadowBlur  = glowSize * 1.5;
     drawCtx.shadowColor = selectedColor;
-    drawCtx.beginPath(); drawCtx.moveTo(x1, y1); drawCtx.lineTo(x2, y2); drawCtx.stroke();
+    drawCtx.beginPath();
+    if (prevMidX !== null) {
+        drawCtx.moveTo(prevMidX, prevMidY);
+        drawCtx.quadraticCurveTo(x1, y1, midX, midY);
+    } else {
+        drawCtx.moveTo(x1, y1); drawCtx.lineTo(midX, midY);
+    }
+    drawCtx.stroke();
 
     // Layer 2 — Bright neon tube
     drawCtx.lineWidth   = brushSize;
@@ -295,16 +309,31 @@ function drawNeonStroke(x1, y1, x2, y2) {
     drawCtx.shadowBlur  = glowSize;
     drawCtx.shadowColor = selectedColor;
     drawCtx.strokeStyle = selectedColor;
-    drawCtx.beginPath(); drawCtx.moveTo(x1, y1); drawCtx.lineTo(x2, y2); drawCtx.stroke();
+    drawCtx.beginPath();
+    if (prevMidX !== null) {
+        drawCtx.moveTo(prevMidX, prevMidY);
+        drawCtx.quadraticCurveTo(x1, y1, midX, midY);
+    } else {
+        drawCtx.moveTo(x1, y1); drawCtx.lineTo(midX, midY);
+    }
+    drawCtx.stroke();
 
-    // Layer 3 — Pure white hot core
-    drawCtx.lineWidth   = brushSize * 0.25;
-    drawCtx.globalAlpha = 1;
+    // Layer 3 — Pure white hot core (thin)
+    drawCtx.lineWidth   = brushSize * 0.2;
+    drawCtx.globalAlpha = 0.9;
     drawCtx.shadowBlur  = 0;
     drawCtx.strokeStyle = '#ffffff';
-    drawCtx.beginPath(); drawCtx.moveTo(x1, y1); drawCtx.lineTo(x2, y2); drawCtx.stroke();
+    drawCtx.beginPath();
+    if (prevMidX !== null) {
+        drawCtx.moveTo(prevMidX, prevMidY);
+        drawCtx.quadraticCurveTo(x1, y1, midX, midY);
+    } else {
+        drawCtx.moveTo(x1, y1); drawCtx.lineTo(midX, midY);
+    }
+    drawCtx.stroke();
 
     drawCtx.restore();
+    prevMidX = midX; prevMidY = midY;
 }
 
 // ─── Overlay: Tracker circle + eraser ring ────────────────────────────────────
@@ -418,8 +447,9 @@ async function loop() {
 
             if (gesture === 'DRAW') {
                 if (!isDrawing) {
-                    // Start new stroke
+                    // Start new stroke — reset bezier state
                     lastX = x; lastY = y;
+                    prevMidX = null; prevMidY = null;
                     isDrawing = true;
                 }
 
@@ -432,7 +462,7 @@ async function loop() {
                 lastX = x; lastY = y;
 
             } else if (gesture === 'ERASE') {
-                isDrawing = false; lastX = null; lastY = null;
+                isDrawing = false; lastX = null; lastY = null; prevMidX = null; prevMidY = null;
                 // Erase under the palm circle
                 drawCtx.save();
                 drawCtx.globalCompositeOperation = 'destination-out';
@@ -442,7 +472,7 @@ async function loop() {
                 drawCtx.restore();
 
             } else {
-                isDrawing = false; lastX = null; lastY = null;
+                isDrawing = false; lastX = null; lastY = null; prevMidX = null; prevMidY = null;
             }
 
         } else {
@@ -450,6 +480,7 @@ async function loop() {
             updatePill('SHOW HAND');
             isDrawing = false; lastX = null; lastY = null;
             smoothX = null; smoothY = null;
+            prevMidX = null; prevMidY = null;
         }
     }
 
