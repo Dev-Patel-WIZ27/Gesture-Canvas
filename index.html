@@ -3,71 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Air Pen Remastered</title>
+    <title>Air Pen — Draw in the Air</title>
+    <meta name="description" content="AI-powered gesture drawing app. Draw in the air with your finger using your webcam.">
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <!-- Load FontAwesome for icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <div id="app-container">
-        <!-- Video Layer -->
-        <video id="webcam" autoplay playsinline></video>
-        <!-- Drawing Layer -->
+        <!-- Video Layer (camera feed) -->
+        <video id="webcam" autoplay playsinline muted></video>
+
+        <!-- Persistent Drawing Canvas -->
         <canvas id="output_canvas"></canvas>
-        <!-- Overlay Layer for skeletal wireframe and cursors -->
+
+        <!-- Overlay Canvas: sparkles, tracker circle, eraser cursor -->
         <canvas id="overlay_canvas"></canvas>
 
-        <!-- Camera Status Indicator -->
-        <div class="camera-status">
-            <span class="dot red" id="cam-dot"></span> Camera <span id="cam-state">OFF</span>
+        <!-- Start Screen Overlay -->
+        <div id="start-screen">
+            <div class="start-card">
+                <div class="brand-logo">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    <h1>Air Pen</h1>
+                </div>
+                <p>Draw in the air with your finger using AI hand tracking.</p>
+                <div class="gesture-legend">
+                    <div class="legend-item"><span class="legend-icon">☝️</span><span>Index finger → Draw</span></div>
+                    <div class="legend-item"><span class="legend-icon">✋</span><span>Open palm → Erase</span></div>
+                    <div class="legend-item"><span class="legend-icon">🤏</span><span>Pinch → Pause</span></div>
+                    <div class="legend-item"><span class="legend-icon">✊</span><span>Fist → Pause</span></div>
+                </div>
+                <button id="start-btn" disabled>
+                    <i class="fa-solid fa-spinner fa-spin"></i> Loading AI Model...
+                </button>
+            </div>
         </div>
 
-        <!-- Dynamic Gesture Guide Badge -->
-        <div id="gesture-guide" class="gesture-badge hidden">
+        <!-- LEFT Sidebar (matches the video exactly) -->
+        <aside class="sidebar" id="sidebar">
+            <!-- Brand -->
+            <div class="sidebar-brand">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <span>Air Pen</span>
+            </div>
+
+            <div class="sidebar-divider"></div>
+
+            <!-- Color Palette - vertical circles -->
+            <div class="sidebar-section">
+                <p class="sidebar-label">Color</p>
+                <div class="color-palette" id="color-grid">
+                    <!-- Injected by JS -->
+                </div>
+            </div>
+
+            <div class="sidebar-divider"></div>
+
+            <!-- Sliders -->
+            <div class="sidebar-section">
+                <p class="sidebar-label">Size <span id="thickness-val">8</span></p>
+                <input type="range" id="thickness-slider" class="slider" min="2" max="40" value="8">
+            </div>
+            <div class="sidebar-section">
+                <p class="sidebar-label">Glow <span id="glow-val">20</span></p>
+                <input type="range" id="glow-slider" class="slider" min="5" max="80" value="20">
+            </div>
+
+            <div class="sidebar-divider"></div>
+
+            <!-- Action Buttons -->
+            <div class="sidebar-section sidebar-actions">
+                <button class="icon-btn" id="undo-btn" title="Undo"><i class="fa-solid fa-rotate-left"></i></button>
+                <button class="icon-btn" id="clear-btn" title="Clear"><i class="fa-solid fa-trash-can"></i></button>
+                <button class="icon-btn" id="save-btn" title="Save"><i class="fa-solid fa-download"></i></button>
+                <button class="icon-btn" id="camera-btn" title="Toggle Camera"><i class="fa-solid fa-video-slash"></i></button>
+            </div>
+        </aside>
+
+        <!-- Bottom Center Gesture Status Pill -->
+        <div id="gesture-pill" class="gesture-pill">
             <span id="gesture-icon">👋</span>
             <span id="gesture-text">SHOW HAND</span>
         </div>
 
-        <!-- Right Sidebar -->
-        <div class="sidebar">
-            <div class="brand">
-                <i class="fa-solid fa-wand-magic-sparkles"></i>
-                <h2>Air Pen</h2>
-            </div>
-
-            <!-- Color Palette -->
-            <div class="panel-section">
-                <label>Colors</label>
-                <div class="color-grid" id="color-grid">
-                    <!-- Colors injected by JS -->
-                </div>
-            </div>
-
-            <!-- Sliders -->
-            <div class="panel-section">
-                <label>Thickness: <span id="thickness-val">8</span>px</label>
-                <input type="range" id="thickness-slider" min="2" max="40" value="8">
-                
-                <label>Glow: <span id="glow-val">15</span>px</label>
-                <input type="range" id="glow-slider" min="0" max="60" value="15">
-            </div>
-
-            <!-- Actions -->
-            <div class="panel-section action-grid">
-                <button class="action-btn" id="undo-btn"><i class="fa-solid fa-rotate-left"></i> Undo</button>
-                <button class="action-btn" id="clear-btn"><i class="fa-solid fa-trash-can"></i> Clear</button>
-                <button class="action-btn" id="camera-btn"><i class="fa-solid fa-video-slash"></i> Hide Cam</button>
-                <button class="action-btn" id="save-btn"><i class="fa-solid fa-download"></i> Save</button>
-            </div>
-
-            <button id="start-btn" class="primary-btn">
-                <i class="fa-solid fa-spinner fa-spin"></i> Loading AI...
-            </button>
+        <!-- Camera Status dot -->
+        <div class="cam-indicator">
+            <span class="dot" id="cam-dot"></span>
+            <span id="cam-state">OFF</span>
         </div>
     </div>
 
-    <!-- MediaPipe Script -->
     <script type="module" src="app.js"></script>
 </body>
 </html>
