@@ -152,10 +152,11 @@ SIDEBAR_COLOR_Y0   = 120
 SIDEBAR_COLOR_STEP = 44
 SLIDER_SIZE_Y      = 490
 SLIDER_GLOW_Y      = 560
-BTN_UNDO_Y         = 615
-BTN_CLEAR_Y        = 650
-BTN_SAVE_Y         = 685
-BTN_CAM_Y          = 720
+BTN_UNDO_Y         = 610
+BTN_CLEAR_Y        = 642
+BTN_SAVE_Y         = 674
+BTN_CAM_Y          = 706
+BTN_QUIT_Y         = 738
 SLIDER_X0          = 18   # left x of slider bar
 SLIDER_X1          = 72   # right x of slider bar
 
@@ -223,10 +224,15 @@ def draw_sidebar(frame, gesture):
         cv2.rectangle(frame, (bx0, by0), (bx1, by1), (70, 70, 90), 1, cv2.LINE_AA)
         cv2.putText(frame, label, (bx0 + 5, by0 + 18), cv2.FONT_HERSHEY_SIMPLEX, 0.33, (200,200,220), 1, cv2.LINE_AA)
 
-    draw_btn("UNDO", BTN_UNDO_Y)
+    draw_btn("UNDO",  BTN_UNDO_Y)
     draw_btn("CLEAR", BTN_CLEAR_Y)
-    draw_btn("SAVE", BTN_SAVE_Y)
-    draw_btn("CAM", BTN_CAM_Y)
+    draw_btn("SAVE",  BTN_SAVE_Y)
+    draw_btn("CAM",   BTN_CAM_Y)
+    # Quit button — slightly red tint
+    bx0, bx1 = 8, SIDEBAR_W - 8
+    cv2.rectangle(frame, (bx0, BTN_QUIT_Y), (bx1, BTN_QUIT_Y + 28), (40, 30, 80), -1, cv2.LINE_AA)
+    cv2.rectangle(frame, (bx0, BTN_QUIT_Y), (bx1, BTN_QUIT_Y + 28), (80, 60, 160), 1, cv2.LINE_AA)
+    cv2.putText(frame, "QUIT", (bx0 + 8, BTN_QUIT_Y + 18), cv2.FONT_HERSHEY_SIMPLEX, 0.33, (140, 100, 255), 1, cv2.LINE_AA)
 
     # Gesture pill at bottom center
     pill_text_map = {
@@ -271,8 +277,10 @@ def recognize_gesture(lm):
 
 
 # ─── Mouse Callback ────────────────────────────────────────────────────────────
+app_running = True   # Controlled only by mouse QUIT button
+
 def on_mouse(event, x, y, flags, param):
-    global selected_color_idx, brush_size, glow_size, dragging_slider, show_camera
+    global selected_color_idx, brush_size, glow_size, dragging_slider, show_camera, app_running
 
     if x > SIDEBAR_W:
         return   # Only care about sidebar clicks
@@ -311,6 +319,8 @@ def on_mouse(event, x, y, flags, param):
             print(f"[Air Pen] Saved: {fname}")
         elif in_btn(BTN_CAM_Y):
             show_camera = not show_camera
+        elif in_btn(BTN_QUIT_Y):
+            app_running = False
 
     elif event == cv2.EVENT_MOUSEMOVE and dragging_slider:
         ratio = max(0.0, min(1.0, (x - SLIDER_X0) / (SLIDER_X1 - SLIDER_X0)))
@@ -332,13 +342,13 @@ def main():
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, CAM_W)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CAM_H)
 
-    win = "Air Pen — Press Q to quit"
+    win = "Air Pen"
     cv2.namedWindow(win, cv2.WINDOW_NORMAL)
     cv2.setMouseCallback(win, on_mouse)
 
-    print("[Air Pen] Starting... Press Q to quit, S to save.")
+    print("[Air Pen] Starting... Use the sidebar to control everything.")
 
-    while True:
+    while app_running:
         ret, frame = cap.read()
         if not ret:
             break
@@ -475,21 +485,7 @@ def main():
         # ── Show ───────────────────────────────────────────────────────────────
         cv2.imshow(win, output)
 
-        key = cv2.waitKey(1) & 0xFF
-        if key == ord('q') or key == 27:
-            break
-        elif key == ord('s'):
-            fname = f"air_pen_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-            cv2.imwrite(fname, draw_canvas)
-            print(f"[Air Pen] Saved: {fname}")
-        elif key == ord('z'):
-            if len(undo_history) > 1:
-                undo_history.pop()
-                draw_canvas[:] = undo_history[-1]
-        elif key == ord('c'):
-            draw_canvas[:] = 0
-            particles.clear()
-            save_state()
+        cv2.waitKey(1)  # Keep window responsive — no keyboard shortcuts
 
     cap.release()
     cv2.destroyAllWindows()
