@@ -87,7 +87,6 @@ python air_pen.py
 | CLEAR | Clear the entire canvas |
 | SAVE | Save drawing as timestamped PNG |
 | CAM | Toggle camera feed on/off |
-| QUIT | Close the application |
 
 ### Tech Stack
 - **MediaPipe Tasks API** — Hand landmark detection
